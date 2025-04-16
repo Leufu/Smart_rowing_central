@@ -1,11 +1,17 @@
 // includes 
-#include "utils.h"
-//#include "BLE_config.h"
+//#include <util.h>
+#include <CodeCell.h>
+#include"BLE_config.h"
+#include <BNO085.h>
+#include <imu_header.h>
+#include <led.h>
+#include <Timer_header.h>
+//#include <capacitor.h>
+#include <Rtos_Task.h>
 
 //#include <arduino>
 //#include 
 //#include <esp_sntp.h>
-#include <esp_timer.h>
 //#include <rtc.h>
 // firts try. the idea is to let the clock works but after 10 secs. restart it. so we know we could reset it properly
 // esta funcion parece prometedora esp_time_impl_set_boot_time(now - since_boot)
@@ -17,8 +23,7 @@
 //
 //struct timeval tv_now;
 
-static uint64_t time_cero= 0;
-static uint64_t time_actual=0;
+
 /*
 int64_t get_time_us()
 {
@@ -29,9 +34,21 @@ int64_t get_time_us()
 */
 void setup()
 {
-  time_cero= esp_timer_get_time();
+  time_cero= get_time_us(); 
   Serial.begin(115200);
   while(!Serial);
+  led_init();
+  IMU_init(IMU_config,10,0xFFFFFFFF);
+  while(err==1)
+  {
+    Serial.print("intento IMU");
+    delay(100);
+    err=0;
+    IMU_Init(IMU_config,10,0xFFFFFFFF);
+  } 
+  Init_BLE();
+
+
   Serial.print("Restart timer test");
 
 
