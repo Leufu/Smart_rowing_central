@@ -1,7 +1,13 @@
 // includes 
 //#include <util.h>
+//
+
+static uint64_t time_cero;
+static uint64_t time_actual;
+
 #include <CodeCell.h>
 #include <Timer_header.h>
+#include "Temp_header.h"
 #include"BLE_config.h"
 #include <BNO085.h>
 #include <imu_header.h>
@@ -47,7 +53,8 @@ void setup()
     IMU_Init(IMU_config,10,0xFFFFFFFF);
   } 
   Init_BLE();
-
+  temp_init();
+  init_freertos_tasks();
 
   Serial.println("Restart timer test");
 
@@ -56,9 +63,9 @@ void setup()
 
 void loop()
 {
-  uint16_t counter= 0;
-  time_actual=esp_timer_get_time();
-  Serial.printf("Time uS= %llu \n ", time_actual-time_cero);
+  //uint16_t counter= 0;
+  //time_actual=esp_timer_get_time();
+  //Serial.printf("Time uS= %llu \n ", time_actual-time_cero);
   //delay(100);
 
   /*

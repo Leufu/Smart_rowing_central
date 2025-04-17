@@ -5,8 +5,6 @@
 #define	size_of_struct 12000
 #define  chunk_size 128
 
-static uint64_t time_cero;
-static uint64_t time_actual;
 const char* matrixUUID= "180C";
 static bool restart=0;
 // UUIDs personalizables para var que se recivira. 
@@ -50,7 +48,12 @@ class TimeWriteCallback : public NimBLECharacteristicCallbacks {
   }
 };
 
-
+class ServerCallbacks : public NimBLEServerCallbacks {
+void onDisconnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo, int reason) override {
+        Serial.printf("Client disconnected - start advertising\n");
+        NimBLEDevice::startAdvertising();
+    }
+}chrCallbacks;
 /*
 class TimeWriteCallback : public NimBLECharacteristicCallbacks {
   void onWrite(NimBLECharacteristic *pCharacteristic) {

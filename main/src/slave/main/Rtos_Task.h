@@ -1,4 +1,5 @@
 #pragma once
+//#include "Temp_header.h"
 #include "imu_header.h"
 #include <Arduino.h>
 #include <cstddef>
@@ -7,14 +8,18 @@
 
 //#include <imu_header.h>
 // Handlers
-TaskHandle_t LED_Task_Handle = NULL; 
-TaskHandle_t Task_IMURead_Handle = NULL;
+TaskHandle_t LED_Task_Handle 			= NULL; 
+TaskHandle_t Task_IMUReadData_Handle= NULL;
 TaskHandle_t Task_SerialShow_Handle = NULL;
-TaskHandle_t Task_BLE_Handle = NULL;
+TaskHandle_t Task_BLE_Handle 			= NULL;
+TaskHandle_t Task_TaskManager_Handle= NULL;
+TaskHandle_t Task_ReadTemp_Handle 	= NULL;
+TaskHandle_t Task_ReadTime_Handle	= NULL;
 // Queues
 QueueHandle_t IMU_fifo;
 
-
+// Semaphore
+SemaphoreHandle_t temp_mutex;
 
 // defines
 #define FIFO_SIZE 125
@@ -40,31 +45,90 @@ void TaskLEDTest(void *pvParameters);
 void TaskReadIMUData(void*pvParameters);
 void TaskSerialShow(void *pvParameters);
 void TaskBLE(void *pvParameters);
-
+void TaskManager(void *pvParameters);
+void TaskReadTime(void *pvParameters);
+void TaskReadTemp(void *pvParameters);
 ////////////////////////////////Init Task///////////////////////////////////
 
 void init_freertos_tasks()
 {
+	//fifo create
 	IMU_fifo = xQueueCreate(FIFO_SIZE,sizeof(IMU_data_t));
 	if(IMU_fifo==NULL)
 	{Serial.print("error creating queue"); while(1);}
 	
+	// mutex create
+	temp_mutex=xSemaphoreCreateMutex();	
 
-
+	// task create
+	xTaskCreate(TaskManager,"TaskManager",2048,NULL,10,&Task_TaskManager_Handle);
+	xTaskCreate(TaskReadTemp,"TaskReadTemp",2048,NULL,1,&Task_ReadTemp_Handle);
+	xTaskCreate(TaskReadTime,"TaskReadTime",2048,NULL,2,&Task_ReadTime_Handle);
 
 	//xTaskCreate(TaskLEDTest,"TaskGlowLed",1000,NULL,1,&LED_Task_Handle);
 	//vTaskSuspend(LED_Task_Handle); // pause the Task
 
-	xTaskCreate(TaskReadIMUData,"TaskIMURead",2048,NULL,5,&Task_IMURead_Handle);
+	//xTaskCreate(TaskReadIMUData,"TaskIMURead",2048,NULL,5,&Task_IMUReadData_Handle);
 	//xTaskCreate(TaskSerialShow,"TaskSerialShow",2048,NULL,1,&Task_SerialShow_Handle);	
 	//vTaskSuspend(Task_SerialShow_Handle); // pause the Task
 
-	xTaskCreate(TaskBLE,"TaskBLE",5096,NULL,23,&Task_BLE_Handle);
+	//xTaskCreate(TaskBLE,"TaskBLE",5096,NULL,23,&Task_BLE_Handle);
 }
 
 
 
 //////////////////////////////Task declaration/////////////////////////////
+// Task Mannager
+void TaskManager(void *pvParameters)
+{
+	while (true) 
+	{
+		//////////////////TaskReadTemp////////////////////////
+		float temp_temp;
+		xSemaphoreTake(temp_mutex,portMAX_DELAY);
+		temp_temp=temperature_global;
+		xSemaphoreGive(temp_mutex);
+      // Ajuste de prioridad basado en temperatura
+      if (temp_temp > 45.0) {
+          vTaskPrioritySet(Task_ReadTemp_Handle, 5); // Alta prioridad
+      } else if (temp_temp > 30.0) {
+          vTaskPrioritySet(Task_ReadTemp_Handle, 3); // Media
+      } else {
+          vTaskPrioritySet(Task_ReadTemp_Handle, 1); // Baja
+      }
+		
+
+		/////////////////////////////////////////////////////
+	
+	
+	}
+}
+/// Task read temp
+void TaskReadTemp(void *pvParameters)
+{
+	while (true) 
+	{
+		xSemaphoreTake(temp_mutex,portMAX_DELAY);
+		temperature_global=read_temp();
+		xSemaphoreGive(temp_mutex);
+
+		Serial.printf("TEMPERATURA = %.2f °C\n", temperature_global);
+		vTaskDelay(pdMS_TO_TICKS(2000));
+
+	}
+}
+///
+
+/// TaskReadTime
+void TaskReadTime(void *pvParameters)
+{
+	while (1) {
+		time_actual=esp_timer_get_time();
+		Serial.printf("Time uS= %llu \n ", time_actual-time_cero);
+		vTaskDelay(pdMS_TO_TICKS(1000));
+	}
+}
+///
 
 void TaskLEDTest(void *pvParameters)
 {
@@ -121,7 +185,7 @@ void TaskBLE(void *pvParameters)
    IMU_data_t d;
 	char buffer[sizeof(IMU_data_t)+10];
 
-	vTaskSuspend(Task_IMURead_Handle);
+	vTaskSuspend(Task_IMUReadData_Handle);
 	while (true) 
 	{
   	 	//BLEDevice central = BLE.central();
@@ -133,7 +197,7 @@ void TaskBLE(void *pvParameters)
   		  Serial.println("Connected to central device");
   		  Serial.print("Device MAC address: ");
   		  //Serial.println(central.address());	    
-		  vTaskResume(Task_IMURead_Handle);
+		  vTaskResume(Task_IMUReadData_Handle);
 		  LED(10u,10u,10u);// device connected and sending data 
   			while (NimBLEDevice::getServer()->getConnectedCount()) // Mientras siga conectado
       	{
