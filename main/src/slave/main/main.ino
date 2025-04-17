@@ -1,18 +1,14 @@
 // includes 
 //#include <util.h>
 #include <CodeCell.h>
+#include <Timer_header.h>
 #include"BLE_config.h"
 #include <BNO085.h>
 #include <imu_header.h>
 #include <led.h>
-#include <Timer_header.h>
 //#include <capacitor.h>
 #include <Rtos_Task.h>
 
-//#include <arduino>
-//#include 
-//#include <esp_sntp.h>
-//#include <rtc.h>
 // firts try. the idea is to let the clock works but after 10 secs. restart it. so we know we could reset it properly
 // esta funcion parece prometedora esp_time_impl_set_boot_time(now - since_boot)
 // la funcion anterior no fue la mejor opcion debido a que es una funcion privada de la api
@@ -21,6 +17,10 @@
 //
 // Ahora la idea es implmentarla en el envio de datos BLUEthoot y que este se active cuando se envie una señal. 
 //
+// es funcional. El programa actual crea un service y char que permite escribir en el. Si se escribe// reinicia el timer, lo que crea un pseudo tiempo. 
+// 2 consideraciones. Es posible mejorar el proceso tomando la latencia entre los dispositivos y restarlo al valor actual
+// El dispositivo no deja reconectarse despues de hacer una desconección. De seguro hay que agregar una función que permita re iniciar el paring una vez se desconecta el server
+
 //struct timeval tv_now;
 
 
@@ -38,7 +38,7 @@ void setup()
   Serial.begin(115200);
   while(!Serial);
   led_init();
-  IMU_init(IMU_config,10,0xFFFFFFFF);
+  IMU_Init(IMU_config,10,0xFFFFFFFF);
   while(err==1)
   {
     Serial.print("intento IMU");
@@ -49,7 +49,7 @@ void setup()
   Init_BLE();
 
 
-  Serial.print("Restart timer test");
+  Serial.println("Restart timer test");
 
 
 }
@@ -61,11 +61,13 @@ void loop()
   Serial.printf("Time uS= %llu \n ", time_actual-time_cero);
   //delay(100);
 
+  /*
   if (time_actual - time_cero >= 10000000)
   {
     time_cero=esp_timer_get_time(); 
     Serial.println("Clock reset");
   }
+  */
   //else
   //{
   //  counter=counter+1;
