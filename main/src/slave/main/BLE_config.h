@@ -6,7 +6,7 @@
 #define  chunk_size 128
 
 const char* matrixUUID= "180C";
-static bool restart=0;
+static bool restart_timer=0; // Global var to know if the timer was restarted
 // UUIDs personalizables para var que se recivira. 
 #define SERVICE_RESET_UUID "12345678-1234-1234-1234-1234567890ab" 
 #define CHARACTERISTIC_RESET_UUID "87654321-4321-4321-4321-ba0987654321"
@@ -42,6 +42,7 @@ class TimeWriteCallback : public NimBLECharacteristicCallbacks {
       // Actualizar el tiempo base al tiempo actual
 		time_cero=get_time_us();
 		pCharacteristic->setValue("0");
+		restart_timer=1;
       Serial.println("Tiempo base actualizado desde BLE");
     }
 

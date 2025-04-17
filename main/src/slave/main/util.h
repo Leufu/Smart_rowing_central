@@ -1,5 +1,6 @@
 
 
+#include "imu_header.h"
 String imuDataToString(IMU_data_t data_t) {
   String json = "{";
   json += "\"time_stamp\":" + String(data_t.time_stamp) + ",";
@@ -15,6 +16,15 @@ String imuDataToString(IMU_data_t data_t) {
   json += "}";
   return json;
 }
+void imuDataToCSV_reduced_char(IMU_data_reduced_t *data, char *buffer, size_t bufferSize)
+{
+  snprintf(buffer, bufferSize,
+           "%lld,%.4f",
+           data->time_stamp,
+           data->acc_x);
+}
+
+
 void imuDataToCSV_char(IMU_data_t *data, char *buffer, size_t bufferSize)
 {
   snprintf(buffer, bufferSize,

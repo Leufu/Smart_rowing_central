@@ -19,6 +19,12 @@ typedef struct
 	float	  mag_z;
 }IMU_data_t;
 
+typedef struct 
+{
+	int64_t time_stamp;
+	float	  acc_x;
+}IMU_data_reduced_t;
+
 
 //typedef struct{solve_element_t matrix[end_step];} solve_matrix_t;
 //static solve_matrix_t m;
@@ -135,8 +141,11 @@ void IMU_read(float IMU_data[],int64_t *time_stamp_var)
       }
     }
   //time_stamp_var=IMU.getTimeStamp();
- time_temp=get_time_us();
- *time_stamp_var=time_temp;
+  
+	 ///Apr 17 UPDATE: change to function get_time_us_partial so the time of the IMUdata 
+	 ///will be reference from the time_cero var (Look to Timer_header.h and top of main)
+	time_temp=get_time_us_partial();
+ 	*time_stamp_var=time_temp;
   //time_stamp_var=get_time_us();
 	//get_time_us(&time_stamp_var);
   }

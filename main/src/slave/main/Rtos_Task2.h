@@ -1,7 +1,5 @@
 #pragma once
 //#include "Temp_header.h"
-//#include "BLE_config.h"
-#include "Timer_header.h"
 #include "imu_header.h"
 #include <Arduino.h>
 #include <cstddef>
@@ -79,11 +77,11 @@ void init_freertos_tasks()
 	//xTaskCreate(TaskLEDTest,"TaskGlowLed",1000,NULL,1,&LED_Task_Handle);
 	//vTaskSuspend(LED_Task_Handle); // pause the Task
 
-	xTaskCreate(TaskReadIMUData,"TaskIMURead",2048,NULL,5,&Task_IMUReadData_Handle);
+	//xTaskCreate(TaskReadIMUData,"TaskIMURead",2048,NULL,5,&Task_IMUReadData_Handle);
 	//xTaskCreate(TaskSerialShow,"TaskSerialShow",2048,NULL,1,&Task_SerialShow_Handle);	
 	//vTaskSuspend(Task_SerialShow_Handle); // pause the Task
 
-	xTaskCreate(TaskBLE,"TaskBLE",5096,NULL,23,&Task_BLE_Handle);
+	//xTaskCreate(TaskBLE,"TaskBLE",5096,NULL,23,&Task_BLE_Handle);
 }
 
 
@@ -94,7 +92,6 @@ void TaskManager(void *pvParameters)
 {
 	//suspendTaks
 	vTaskSuspend(Task_IMUReadData_Handle);
-	vTaskSuspend(Task_BLE_Handle);
 	
 	while (true) 
 	{
@@ -114,12 +111,7 @@ void TaskManager(void *pvParameters)
 		
 
 		/////////////////////////////////////////////////////
-		
-		///////////////////////TaskIMURead//////////////////
-		if(restart_timer==1)
-		{vTaskResume(Task_BLE_Handle);restart_timer=0;}
-		
-		/////////////////////////////////////////////////////
+
 
 	
 	}
@@ -144,9 +136,8 @@ void TaskReadTemp(void *pvParameters)
 void TaskReadTime(void *pvParameters)
 {
 	while (1) {
-		//time_actual=esp_timer_get_time();
-		time_partial=get_time_us_partial();	
-		Serial.printf("Time uS= %llu \n ", time_partial);
+		time_actual=esp_timer_get_time();
+		Serial.printf("Time uS= %llu \n ", time_actual-time_cero);
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
 }
@@ -172,13 +163,7 @@ void TaskReadIMUData(void *pvParameters)
 	IMU_data_t dato;
 	float IMU_snapshot[23];
 	int64_t time_stamp_var;
-
-	////TEST///
-	IMU_data_reduced_t array;
 	
-	
-
-
 	// documentación del apr 17, la agrego ahora porque tuve que volver a ver el codigo
 	// despues de semanas y no lo entendia del todo. 
 	// y en resumen, si, es super optimizable, como lo dijo el PP del pasado
@@ -202,25 +187,13 @@ void TaskReadIMUData(void *pvParameters)
 		dato.mag_x = IMU_snapshot[14];
 		dato.mag_y = IMU_snapshot[15];
 		dato.mag_z = IMU_snapshot[16];
-		
-		//TEST	
-		array.acc_x=IMU_snapshot[8];
-		array.time_stamp=time_stamp_var;
-		if(xQueueSend(IMU_reduced_fifo,&array,portMAX_DELAY)==pdPASS)
+
+		if(xQueueSend(IMU_fifo,&dato,portMAX_DELAY)==pdPASS)
 		{//Serial.println("data added to FIFO ");
 		 }
 		else{Serial.println("FIFO FULL");}
-		/////////////////////////////////
-		////
-		//if(xQueueSend(IMU_fifo,&dato,portMAX_DELAY)==pdPASS)
-		//{//Serial.println("data added to FIFO ");
-		// }
-		//else{Serial.println("FIFO FULL");}
-		
 		vTaskDelay(pdMS_TO_TICKS(IMU_MS_UPDATE));
-		// Estudiar la implementación de esta función. Podrías agregar precision 
-		// void vTaskDelayUntil(TickType_t *pxPreviousWakeTime, TickType_t xTimeIncrement);
-
+	
 	}
 }
 ///////////////////// TaskBLE//////////////////////
@@ -235,41 +208,6 @@ void TaskBLE(void *pvParameters)
    IMU_data_t d;
 	char buffer[sizeof(IMU_data_t)+10];
 
-	///TEST///
-	IMU_data_reduced_t array;
-	char buffer_reduced[sizeof(IMU_data_reduced_t)+10];
-	///
-	///
-	while (true) 
-	{
-  	 	//BLEDevice central = BLE.central();
-  		rainbow(); // rainbow led till the Bluetooth is connected
-
-  		if(NimBLEDevice::getServer()->getConnectedCount())
-  		{
-				
-  		  Serial.println("Connected to central device");
-  		  Serial.print("Device MAC address: ");
-  		  //Serial.println(central.address());	    
-		  vTaskResume(Task_IMUReadData_Handle); 	
-		  LED(10u,10u,10u);// device connected and sending data 
-  			while (NimBLEDevice::getServer()->getConnectedCount()) // Mientras siga conectado
-      	{
-        		if (xQueueReceive(IMU_reduced_fifo, &array, portMAX_DELAY) == pdPASS)
-        		{
-          		imuDataToCSV_reduced_char(&array, buffer_reduced, sizeof(buffer_reduced));
-
-          		// Enviar por BLE
-          		pSensorCharacteristic->setValue((uint8_t*)buffer_reduced, strlen(buffer_reduced));
-          		pSensorCharacteristic->notify(); // Notifica el valor actual
-        		}
-      	}
-  		  LED(0,0,0);
-  		
-  		}
-
-	}
-	/*
 	while (true) 
 	{
   	 	//BLEDevice central = BLE.central();
@@ -299,7 +237,6 @@ void TaskBLE(void *pvParameters)
   		}
 
 	}
-	*/
 }
 
 

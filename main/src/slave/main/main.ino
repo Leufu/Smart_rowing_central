@@ -4,6 +4,7 @@
 
 static uint64_t time_cero;
 static uint64_t time_actual;
+static uint64_t time_partial;
 
 #include <CodeCell.h>
 #include <Timer_header.h>
